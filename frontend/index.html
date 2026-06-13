@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hybrid Ensemble Deepfake Detector</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <style>
+    :root {
+      --bg: #050713;
+      --bg2: #090d1f;
+      --panel: rgba(16, 24, 48, 0.78);
+      --panel2: rgba(22, 32, 62, 0.92);
+      --stroke: rgba(148, 163, 184, 0.24);
+      --text: #edf3ff;
+      --muted: #a8b3c7;
+      --soft: #cbd5e1;
+      --primary: #7c3aed;
+      --primary2: #06b6d4;
+      --image: #22c55e;
+      --audio: #f59e0b;
+      --video: #ec4899;
+      --fake: #fb4565;
+      --real: #27d17f;
+      --warn: #f97316;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, 0.24), transparent 32rem),
+        radial-gradient(circle at top right, rgba(6, 182, 212, 0.18), transparent 30rem),
+        linear-gradient(135deg, var(--bg), var(--bg2) 55%, #050713);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, black, transparent 85%);
+      z-index: -2;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      width: 34rem;
+      height: 34rem;
+      right: -18rem;
+      bottom: -16rem;
+      background: radial-gradient(circle, rgba(236, 72, 153, 0.22), transparent 68%);
+      filter: blur(8px);
+      z-index: -1;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      backdrop-filter: blur(18px);
+      background: rgba(5, 7, 19, 0.72);
+      border-bottom: 1px solid var(--stroke);
+    }
+
+    .topbar-inner {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background:
+        linear-gradient(135deg, rgba(124, 58, 237, 0.94), rgba(6, 182, 212, 0.88)),
+        #111827;
+      box-shadow: 0 0 28px rgba(124, 58, 237, 0.34);
+    }
+
+    .brand-mark svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 850;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+
+    .brand small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.73rem;
+      margin-top: 2px;
+    }
+
+    .nav-pill {
+      color: var(--soft);
+      border: 1px solid var(--stroke);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      background: rgba(15, 23, 42, 0.55);
+    }
+
+    .hero {
+      padding: 54px 0 26px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+      gap: 26px;
+      align-items: stretch;
+    }
+
+    .hero-card,
+    .detector-card,
+    .result,
+    .history-section,
+    .info-card {
+      border: 1px solid var(--stroke);
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.58));
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero-card {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(6, 182, 212, 0.14), transparent 18rem),
+        radial-gradient(circle at 80% 0%, rgba(124, 58, 237, 0.17), transparent 18rem);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(124, 58, 237, 0.36);
+      border-radius: 999px;
+      background: rgba(124, 58, 237, 0.12);
+      color: #d9ccff;
+      font-weight: 700;
+      font-size: 0.78rem;
+      margin-bottom: 18px;
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary2);
+      box-shadow: 0 0 0 6px rgba(6, 182, 212, 0.13);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    .hero h2 {
+      position: relative;
+      margin: 0;
+      font-size: clamp(2.1rem, 4.7vw, 4.6rem);
+      line-height: 0.98;
+      letter-spacing: -2.6px;
+      font-weight: 950;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #ffffff, #bfefff 45%, #d4c2ff 85%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero p {
+      position: relative;
+      max-width: 720px;
+      margin: 18px 0 0;
+      color: var(--soft);
+      line-height: 1.75;
+      font-size: 1.02rem;
+    }
+
+    .fyp-line {
+      position: relative;
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .fyp-chip {
+      border: 1px solid var(--stroke);
+      color: var(--soft);
+      background: rgba(15, 23, 42, 0.66);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      font-weight: 650;
+    }
+
+    .hero-actions {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .primary-btn,
+    .ghost-btn,
+    .btn-analyze,
+    .btn-heatmap,
+    .btn-clear {
+      border: 0;
+      cursor: pointer;
+      transition: 0.22s ease;
+      font-weight: 800;
+    }
+
+    .primary-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 14px;
+      padding: 13px 18px;
+      color: white;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      box-shadow: 0 18px 45px rgba(124, 58, 237, 0.26);
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      color: white;
+    }
+
+    .ghost-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 14px;
+      padding: 13px 18px;
+      color: var(--soft);
+      text-decoration: none;
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid var(--stroke);
+    }
+
+    .ghost-btn:hover {
+      border-color: rgba(6, 182, 212, 0.55);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    .hero-visual {
+      padding: 24px;
+      min-height: 100%;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.62)),
+        radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.18), transparent 18rem);
+      box-shadow: var(--shadow);
+    }
+
+    .radar {
+      position: relative;
+      min-height: 360px;
+      border-radius: 22px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background:
+        radial-gradient(circle at center, rgba(6, 182, 212, 0.18) 0, transparent 8rem),
+        radial-gradient(circle at center, transparent 0 52px, rgba(148, 163, 184, 0.16) 53px, transparent 54px),
+        radial-gradient(circle at center, transparent 0 108px, rgba(148, 163, 184, 0.12) 109px, transparent 110px),
+        radial-gradient(circle at center, transparent 0 164px, rgba(148, 163, 184, 0.10) 165px, transparent 166px);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .radar::before {
+      content: "";
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      left: 50%;
+      top: 50%;
+      transform-origin: left top;
+      background: linear-gradient(45deg, rgba(6, 182, 212, 0.33), transparent 52%);
+      animation: sweep 5.5s linear infinite;
+    }
+
+    .scan-core {
+      position: relative;
+      width: 132px;
+      height: 132px;
+      border-radius: 34px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.95), rgba(6, 182, 212, 0.9));
+      box-shadow: 0 0 70px rgba(6, 182, 212, 0.34);
+      transform: rotate(8deg);
+    }
+
+    .scan-core svg {
+      width: 70px;
+      height: 70px;
+      transform: rotate(-8deg);
+    }
+
+    .floating-card {
+      position: absolute;
+      min-width: 136px;
+      padding: 13px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(5, 7, 19, 0.64);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 52px rgba(0, 0, 0, 0.24);
+    }
+
+    .floating-card strong {
+      display: block;
+      font-size: 0.86rem;
+      margin-bottom: 3px;
+    }
+
+    .floating-card span {
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+
+    .float-image {
+      left: 18px;
+      top: 32px;
+    }
+
+    .float-audio {
+      right: 18px;
+      top: 110px;
+    }
+
+    .float-video {
+      left: 38px;
+      bottom: 32px;
+    }
+
+    .detector-card {
+      padding: 24px;
+      margin-top: 18px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .section-title h3 {
+      margin: 0;
+      font-weight: 920;
+      letter-spacing: -0.8px;
+      font-size: clamp(1.45rem, 2vw, 2.1rem);
+    }
+
+    .section-title p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .mode-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid var(--stroke);
+      background: rgba(15, 23, 42, 0.66);
+      padding: 17px;
+      cursor: pointer;
+      transition: 0.24s ease;
+      min-height: 128px;
+    }
+
+    .mode-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: 0.24s ease;
+    }
+
+    .mode-card[data-mode="image"]::before {
+      background: radial-gradient(circle at 100% 0%, rgba(34, 197, 94, 0.18), transparent 72%);
+    }
+
+    .mode-card[data-mode="audio"]::before {
+      background: radial-gradient(circle at 100% 0%, rgba(245, 158, 11, 0.2), transparent 72%);
+    }
+
+    .mode-card[data-mode="video"]::before {
+      background: radial-gradient(circle at 100% 0%, rgba(236, 72, 153, 0.2), transparent 72%);
+    }
+
+    .mode-card:hover,
+    .mode-card.active {
+      transform: translateY(-3px);
+      border-color: rgba(6, 182, 212, 0.46);
+    }
+
+    .mode-card.active {
+      box-shadow: 0 18px 50px rgba(6, 182, 212, 0.12);
+    }
+
+    .mode-card.active::before,
+    .mode-card:hover::before {
+      opacity: 1;
+    }
+
+    .mode-icon {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      margin-bottom: 14px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .mode-icon svg {
+      width: 27px;
+      height: 27px;
+    }
+
+    .mode-card h4 {
+      position: relative;
+      margin: 0 0 5px;
+      font-size: 1.02rem;
+      font-weight: 850;
+    }
+
+    .mode-card p {
+      position: relative;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .opts {
+      display: none;
+      margin-bottom: 16px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      background: rgba(5, 7, 19, 0.34);
+    }
+
+    .opts.show {
+      display: block;
+      animation: fadeUp 0.28s ease;
+    }
+
+    .opts label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 7px;
+      display: block;
+    }
+
+    .form-ctrl {
+      width: 100%;
+      color: var(--text);
+      background: rgba(15, 23, 42, 0.86);
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 11px 12px;
+      outline: none;
+    }
+
+    .form-ctrl:focus {
+      border-color: rgba(6, 182, 212, 0.72);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.12);
+    }
+
+    .upload-shell {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(250px, 0.48fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .drop-zone {
+      min-height: 308px;
+      border: 1.5px dashed rgba(148, 163, 184, 0.34);
+      border-radius: 22px;
+      background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.34)),
+        radial-gradient(circle at top, rgba(124, 58, 237, 0.16), transparent 22rem);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      cursor: pointer;
+      transition: 0.24s ease;
+      overflow: hidden;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.over {
+      border-color: rgba(6, 182, 212, 0.75);
+      background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.38)),
+        radial-gradient(circle at top, rgba(6, 182, 212, 0.17), transparent 22rem);
+      transform: translateY(-2px);
+    }
+
+    .drop-zone input {
+      display: none;
+    }
+
+    .drop-content {
+      width: 100%;
+    }
+
+    .drop-icon {
+      width: 82px;
+      height: 82px;
+      margin: 0 auto 15px;
+      display: grid;
+      place-items: center;
+      border-radius: 28px;
+      background:
+        linear-gradient(135deg, rgba(124, 58, 237, 0.92), rgba(6, 182, 212, 0.86)),
+        #111827;
+      box-shadow: 0 20px 60px rgba(124, 58, 237, 0.22);
+    }
+
+    .drop-icon svg {
+      width: 44px;
+      height: 44px;
+    }
+
+    .drop-title {
+      font-size: 1.16rem;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .drop-hint {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .media-preview {
+      display: none;
+      width: 100%;
+      max-height: 245px;
+      border-radius: 18px;
+      margin-top: 18px;
+      border: 1px solid var(--stroke);
+      background: rgba(5, 7, 19, 0.55);
+      object-fit: cover;
+    }
+
+    audio.media-preview {
+      max-height: none;
+      padding: 14px;
+    }
+
+    .side-panel {
+      border: 1px solid var(--stroke);
+      border-radius: 22px;
+      background: rgba(5, 7, 19, 0.34);
+      padding: 18px;
+    }
+
+    .side-panel h4 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      font-weight: 850;
+    }
+
+    .feature-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--soft);
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    .tick {
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 22px;
+      color: #06121c;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary2), #9ff3ff);
+      font-size: 0.78rem;
+      font-weight: 950;
+    }
+
+    .btn-analyze {
+      width: 100%;
+      margin-top: 16px;
+      border-radius: 18px;
+      padding: 15px 18px;
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--video), var(--primary2));
+      background-size: 170% 170%;
+      box-shadow: 0 20px 60px rgba(124, 58, 237, 0.2);
+      letter-spacing: 0.2px;
+    }
+
+    .btn-analyze:not(:disabled):hover {
+      transform: translateY(-2px);
+      background-position: 100% 50%;
+    }
+
+    .btn-analyze:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .progress-steps {
+      display: none;
+      margin-top: 18px;
+      padding: 14px;
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      background: rgba(5, 7, 19, 0.28);
+    }
+
+    .progress-steps.show {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+    }
+
+    .step {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 17px;
+      left: 50%;
+      width: 100%;
+      height: 2px;
+      background: rgba(148, 163, 184, 0.22);
+      z-index: 0;
+    }
+
+    .step.done:not(:last-child)::after {
+      background: linear-gradient(90deg, var(--primary2), var(--primary));
+    }
+
+    .step-icon {
+      position: relative;
+      z-index: 1;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: rgba(148, 163, 184, 0.18);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      font-size: 0.78rem;
+      font-weight: 950;
+    }
+
+    .step.active .step-icon {
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      animation: pop 1.3s ease-in-out infinite;
+    }
+
+    .step.done .step-icon {
+      background: var(--real);
+      color: #03150d;
+    }
+
+    .step-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 750;
+    }
+
+    .step.active .step-label,
+    .step.done .step-label {
+      color: white;
+    }
+
+    .error-box {
+      display: none;
+      margin-top: 16px;
+      border: 1px solid rgba(251, 69, 101, 0.48);
+      background: rgba(251, 69, 101, 0.1);
+      color: #ffadb9;
+      border-radius: 16px;
+      padding: 13px 15px;
+      font-size: 0.9rem;
+    }
+
+    .error-box.show {
+      display: block;
+    }
+
+    .result {
+      display: none;
+      padding: 24px;
+      margin-top: 18px;
+    }
+
+    .result.show {
+      display: block;
+      animation: fadeUp 0.34s ease;
+    }
+
+    .result-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .verdict {
+      font-size: clamp(2.2rem, 5vw, 4.4rem);
+      line-height: 0.9;
+      font-weight: 980;
+      letter-spacing: -1.8px;
+    }
+
+    .verdict.fake {
+      color: var(--fake);
+      text-shadow: 0 0 26px rgba(251, 69, 101, 0.32);
+    }
+
+    .verdict.real {
+      color: var(--real);
+      text-shadow: 0 0 26px rgba(39, 209, 127, 0.32);
+    }
+
+    .verdict-badge {
+      align-self: flex-start;
+      color: var(--soft);
+      border: 1px solid var(--stroke);
+      background: rgba(15, 23, 42, 0.76);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.76rem;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .conf-label {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 750;
+      margin-bottom: 8px;
+    }
+
+    .conf-track {
+      height: 18px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .conf-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      transition: width 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 24px rgba(255, 255, 255, 0.14);
+    }
+
+    .conf-nums {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-top: 6px;
+      margin-bottom: 20px;
+    }
+
+    .breakdown-title,
+    .heatmap-title {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .prob-row {
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) 150px 54px;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+    }
+
+    .prob-row:last-child {
+      border-bottom: 0;
+    }
+
+    .prob-name {
+      font-size: 0.9rem;
+      color: var(--soft);
+    }
+
+    .prob-name.bold,
+    .prob-pct.bold {
+      font-weight: 900;
+      color: white;
+    }
+
+    .mini-track {
+      width: 100%;
+      height: 11px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+    }
+
+    .mini-fill {
+      height: 100%;
+      border-radius: inherit;
+    }
+
+    .prob-pct {
+      text-align: right;
+      color: var(--soft);
+      font-size: 0.84rem;
+    }
+
+    .heatmap-section {
+      display: none;
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(148, 163, 184, 0.13);
+    }
+
+    .heatmap-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .heatmap-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .heatmap-sel {
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text);
+      padding: 9px 10px;
+      outline: none;
+      font-size: 0.82rem;
+    }
+
+    .btn-heatmap,
+    .btn-clear {
+      border-radius: 12px;
+      color: white;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--stroke);
+      padding: 9px 12px;
+      font-size: 0.82rem;
+    }
+
+    .btn-heatmap:hover,
+    .btn-clear:hover {
+      border-color: rgba(6, 182, 212, 0.55);
+      transform: translateY(-1px);
+    }
+
+    .heatmap-spin {
+      display: none;
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin: 8px 0;
+    }
+
+    .heatmap-spin.show {
+      display: block;
+    }
+
+    .heatmap-img {
+      display: none;
+      width: min(100%, 520px);
+      border-radius: 18px;
+      border: 1px solid var(--stroke);
+      margin-top: 12px;
+    }
+
+    .heatmap-img.show {
+      display: block;
+      animation: fadeUp 0.34s ease;
+    }
+
+    .history-section {
+      display: none;
+      padding: 22px;
+      margin: 18px 0 42px;
+    }
+
+    .history-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 850;
+      margin-bottom: 13px;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .hist-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px;
+      border: 1px solid var(--stroke);
+      background: rgba(5, 7, 19, 0.28);
+      border-radius: 16px;
+      transition: 0.2s ease;
+    }
+
+    .hist-item:hover {
+      transform: translateY(-2px);
+      border-color: rgba(6, 182, 212, 0.45);
+    }
+
+    .hist-thumb {
+      width: 50px;
+      height: 50px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 50px;
+      border-radius: 15px;
+      background: rgba(15, 23, 42, 0.84);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      overflow: hidden;
+    }
+
+    .hist-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .hist-thumb svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    .hist-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .hist-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.88rem;
+      font-weight: 800;
+    }
+
+    .hist-meta {
+      color: var(--muted);
+      font-size: 0.76rem;
+      margin-top: 2px;
+    }
+
+    .hist-verdict {
+      font-size: 0.86rem;
+      font-weight: 950;
+    }
+
+    .hist-verdict.fake {
+      color: var(--fake);
+    }
+
+    .hist-verdict.real {
+      color: var(--real);
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 18px 0 40px;
+    }
+
+    .info-card {
+      padding: 20px;
+    }
+
+    .info-card h4 {
+      margin: 0 0 8px;
+      font-size: 0.96rem;
+      font-weight: 900;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+
+    footer {
+      color: var(--muted);
+      text-align: center;
+      padding: 26px 16px 40px;
+      font-size: 0.82rem;
+    }
+
+    @keyframes sweep {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(0.7);
+        opacity: 0.55;
+      }
+    }
+
+    @keyframes pop {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.08);
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-visual {
+        min-height: 360px;
+      }
+
+      .upload-shell,
+      .info-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .topbar-inner {
+        height: auto;
+        padding: 13px 0;
+        align-items: flex-start;
+      }
+
+      .nav-pill {
+        display: none;
+      }
+
+      .hero {
+        padding-top: 34px;
+      }
+
+      .hero-card,
+      .detector-card,
+      .result,
+      .history-section {
+        padding: 20px;
+        border-radius: 20px;
+      }
+
+      .mode-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .progress-steps.show {
+        grid-template-columns: 1fr 1fr;
+        row-gap: 16px;
+      }
+
+      .step:not(:last-child)::after {
+        display: none;
+      }
+
+      .prob-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .prob-pct {
+        text-align: left;
+      }
+
+      .heatmap-head,
+      .result-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .floating-card {
+        transform: scale(0.86);
+      }
+
+      .float-image {
+        left: 2px;
+      }
+
+      .float-audio {
+        right: 2px;
+      }
+
+      .float-video {
+        left: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="page topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 3l7 3v5c0 4.9-2.9 8.4-7 10-4.1-1.6-7-5.1-7-10V6l7-3z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M8.5 12.2l2.2 2.2 4.9-5.1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Hybrid Ensemble Deepfake Detector</h1>
+          <small>Web based audio, video and image verification</small>
+        </div>
+      </div>
+      <div class="nav-pill">BSCS 8th Semester FYP | Hazara University</div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-card">
+        <div class="eyebrow"><span class="pulse"></span> AI media authenticity scanner</div>
+        <h2><span class="gradient-text">Detect deepfakes across image, voice and video.</span></h2>
+        <p>
+          An AI powered FYP system designed to verify suspicious media through visual ensemble learning,
+          audio anti spoofing and confidence based prediction.
+        </p>
+        <div class="fyp-line">
+          <span class="fyp-chip">Final Year Project</span>
+          <span class="fyp-chip">BSCS 8th Semester</span>
+          <span class="fyp-chip">Hazara University Mansehra</span>
+        </div>
+        <div class="hero-actions">
+          <a class="primary-btn" href="#detector">Start detection</a>
+          <a class="ghost-btn" href="#workflow">View workflow</a>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="radar">
+          <div class="floating-card float-image">
+            <strong>Image scan</strong>
+            <span>Face artifacts and heatmap cues</span>
+          </div>
+          <div class="floating-card float-audio">
+            <strong>Voice scan</strong>
+            <span>LCNN spoof probability</span>
+          </div>
+          <div class="floating-card float-video">
+            <strong>Video fusion</strong>
+            <span>Visual plus audio decision</span>
+          </div>
+          <div class="scan-core">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M4 12c2.1-4.5 5-6.8 8-6.8s5.9 2.3 8 6.8c-2.1 4.5-5 6.8-8 6.8S6.1 16.5 4 12z" stroke="white" stroke-width="1.7" stroke-linejoin="round"/>
+              <path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z" stroke="white" stroke-width="1.7"/>
+              <path d="M12 10.2v3.6M10.2 12h3.6" stroke="white" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="detector-card" id="detector">
+      <div class="section-title">
+        <div>
+          <h3>Media Verification Console</h3>
+          <p>Choose media type, upload a file and run the detector.</p>
+        </div>
+      </div>
+
+      <div class="mode-grid" role="tablist">
+        <button type="button" class="mode-card active" data-mode="image">
+          <div class="mode-icon" style="color: var(--image);">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M5 6.5A2.5 2.5 0 017.5 4h9A2.5 2.5 0 0119 6.5v11A2.5 2.5 0 0116.5 20h-9A2.5 2.5 0 015 17.5v-11z" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M8 16l2.5-3 2 2.2 2.5-3.2L18 16H8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M9 8.6h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h4>Image</h4>
+          <p>Detect fake facial images and generate Grad CAM explanations.</p>
+        </button>
+
+        <button type="button" class="mode-card" data-mode="audio">
+          <div class="mode-icon" style="color: var(--audio);">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 4v16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M8 8v8M16 8v8M4 10v4M20 10v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h4>Voice</h4>
+          <p>Analyze uploaded speech for spoofed or synthetic voice patterns.</p>
+        </button>
+
+        <button type="button" class="mode-card" data-mode="video">
+          <div class="mode-icon" style="color: var(--video);">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M4.8 6.5A2.5 2.5 0 017.3 4h7.4a2.5 2.5 0 012.5 2.5v11a2.5 2.5 0 01-2.5 2.5H7.3a2.5 2.5 0 01-2.5-2.5v-11z" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M17.2 9.2l3-1.8v9.2l-3-1.8" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M10 9l4 3-4 3V9z" fill="currentColor"/>
+            </svg>
+          </div>
+          <h4>Video</h4>
+          <p>Fuse visual frame evidence with audio spoof detection.</p>
+        </button>
+      </div>
+
+      <div class="opts" id="video-opts">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label for="sample-frames">Frames to sample</label>
+            <input type="number" class="form-ctrl" id="sample-frames" value="10" min="1" max="50" />
+          </div>
+          <div class="col-sm-6">
+            <label for="fusion-mode">Fusion mode</label>
+            <select class="form-ctrl" id="fusion-mode">
+              <option value="weighted_avg">Weighted avg, 0.6 visual plus 0.4 audio</option>
+              <option value="max_suspicion">Max suspicion</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="upload-shell">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept="image/*" />
+          <div class="drop-content">
+            <div class="drop-icon" id="drop-icon"></div>
+            <div class="drop-title" id="drop-title">Upload an image for deepfake analysis</div>
+            <div class="drop-hint" id="drop-hint">Accepts: JPG, PNG, BMP, WEBP</div>
+            <img id="img-preview" class="media-preview" alt="Selected image preview" />
+            <video id="vid-preview" class="media-preview" controls></video>
+            <audio id="aud-preview" class="media-preview" controls></audio>
+          </div>
+        </div>
+
+        <aside class="side-panel" id="workflow">
+          <h4>Detection workflow</h4>
+          <ul class="feature-list">
+            <li><span class="tick">1</span><span>Upload image, audio or video file.</span></li>
+            <li><span class="tick">2</span><span>Extract useful media features from the selected input.</span></li>
+            <li><span class="tick">3</span><span>Run ensemble inference and calculate confidence.</span></li>
+            <li><span class="tick">4</span><span>Display fake or real verdict with probability breakdown.</span></li>
+          </ul>
+        </aside>
+      </div>
+
+      <button class="btn-analyze" id="analyze-btn" disabled>Analyze media</button>
+
+      <div class="progress-steps" id="progress-steps">
+        <div class="step" id="step-upload"><div class="step-icon">1</div><div class="step-label">Upload</div></div>
+        <div class="step" id="step-extract"><div class="step-icon">2</div><div class="step-label">Extract</div></div>
+        <div class="step" id="step-infer"><div class="step-icon">3</div><div class="step-label">Inference</div></div>
+        <div class="step" id="step-done"><div class="step-icon">4</div><div class="step-label">Done</div></div>
+      </div>
+
+      <div class="error-box" id="error-box"></div>
+    </section>
+
+    <section class="result" id="result-card">
+      <div class="result-top">
+        <div class="verdict" id="verdict-text"></div>
+        <span class="verdict-badge" id="fusion-badge"></span>
+      </div>
+
+      <div class="conf-label">Confidence score</div>
+      <div class="conf-track"><div class="conf-fill" id="conf-fill"></div></div>
+      <div class="conf-nums"><span>0%</span><span id="conf-pct"></span><span>100%</span></div>
+
+      <div class="breakdown-title">Probability breakdown</div>
+      <div id="prob-breakdown"></div>
+
+      <div class="heatmap-section" id="heatmap-section">
+        <div class="heatmap-head">
+          <div class="heatmap-title">Grad CAM heatmap</div>
+          <div class="heatmap-controls">
+            <select class="heatmap-sel" id="heatmap-model">
+              <option value="efficientnet_b0">EfficientNet-B0</option>
+              <option value="xception">XceptionNet</option>
+              <option value="vit">ViT</option>
+            </select>
+            <button class="btn-heatmap" id="btn-heatmap">Generate</button>
+          </div>
+        </div>
+        <div class="heatmap-spin" id="heatmap-spin">Generating heatmap...</div>
+        <img id="heatmap-img" class="heatmap-img" alt="Grad CAM heatmap" />
+      </div>
+    </section>
+
+    <section class="history-section" id="history-section">
+      <div class="history-title">
+        <span>Recent analyses</span>
+        <button class="btn-clear" id="btn-clear-hist">Clear</button>
+      </div>
+      <div class="history-list" id="history-list"></div>
+    </section>
+
+    <section class="info-row">
+      <div class="info-card">
+        <h4>Visual ensemble</h4>
+        <p>XceptionNet, EfficientNet-B0 and ViT combine visual clues for image and frame level detection.</p>
+      </div>
+      <div class="info-card">
+        <h4>Audio spoof scan</h4>
+        <p>Voice input is checked with LCNN based audio anti spoofing to detect synthetic speech patterns.</p>
+      </div>
+      <div class="info-card">
+        <h4>FYP identity</h4>
+        <p>Final Year Project for BSCS 8th Semester, Hazara University Mansehra.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Hybrid Ensemble Deepfake Detector | XceptionNet + EfficientNet-B0 + ViT + LCNN | BSCS 8th Semester FYP
+  </footer>
+
+  <script>
+    const API = "";
+
+    let currentMode = "image";
+    let selectedFile = null;
+    let currentImagePath = null;
+    let history = JSON.parse(localStorage.getItem("dd_history") || "[]");
+
+    const $ = id => document.getElementById(id);
+
+    const modeCards = document.querySelectorAll(".mode-card");
+    const dropZone = $("drop-zone");
+    const fileInput = $("file-input");
+    const analyzeBtn = $("analyze-btn");
+    const progressEl = $("progress-steps");
+    const resultCard = $("result-card");
+    const verdictEl = $("verdict-text");
+    const confFill = $("conf-fill");
+    const confPct = $("conf-pct");
+    const probBreak = $("prob-breakdown");
+    const fusionBadge = $("fusion-badge");
+    const errorBox = $("error-box");
+    const videoOpts = $("video-opts");
+    const imgPreview = $("img-preview");
+    const vidPreview = $("vid-preview");
+    const audPreview = $("aud-preview");
+    const heatmapSec = $("heatmap-section");
+    const heatmapImg = $("heatmap-img");
+    const heatmapSpin = $("heatmap-spin");
+    const btnHeatmap = $("btn-heatmap");
+    const histSection = $("history-section");
+    const histList = $("history-list");
+    const dropIcon = $("drop-icon");
+    const dropTitle = $("drop-title");
+
+    const ACCEPT = {
+      image: "image/*",
+      audio: ".wav,.flac,.mp3,.ogg,.m4a",
+      video: ".mp4,.avi,.mov,.mkv,.webm"
+    };
+
+    const HINT = {
+      image: "Accepts: JPG, PNG, BMP, WEBP",
+      audio: "Accepts: WAV, FLAC, MP3, OGG, M4A",
+      video: "Accepts: MP4, AVI, MOV, MKV, WEBM"
+    };
+
+    const TITLE = {
+      image: "Upload an image for deepfake analysis",
+      audio: "Upload a voice sample for spoof analysis",
+      video: "Upload a video for multimodal verification"
+    };
+
+    const ICONS = {
+      image: `<svg viewBox="0 0 24 24" fill="none"><path d="M5 6.5A2.5 2.5 0 017.5 4h9A2.5 2.5 0 0119 6.5v11A2.5 2.5 0 0116.5 20h-9A2.5 2.5 0 015 17.5v-11z" stroke="white" stroke-width="1.8"/><path d="M8 16l2.5-3 2 2.2 2.5-3.2L18 16H8z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8.6h.01" stroke="white" stroke-width="3" stroke-linecap="round"/></svg>`,
+      audio: `<svg viewBox="0 0 24 24" fill="none"><path d="M12 4v16" stroke="white" stroke-width="1.8" stroke-linecap="round"/><path d="M8 8v8M16 8v8M4 10v4M20 10v4" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+      video: `<svg viewBox="0 0 24 24" fill="none"><path d="M4.8 6.5A2.5 2.5 0 017.3 4h7.4a2.5 2.5 0 012.5 2.5v11a2.5 2.5 0 01-2.5 2.5H7.3a2.5 2.5 0 01-2.5-2.5v-11z" stroke="white" stroke-width="1.8"/><path d="M17.2 9.2l3-1.8v9.2l-3-1.8" stroke="white" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 9l4 3-4 3V9z" fill="white"/></svg>`
+    };
+
+    const HISTORY_ICON = {
+      image: `<svg viewBox="0 0 24 24" fill="none"><path d="M5 6.5A2.5 2.5 0 017.5 4h9A2.5 2.5 0 0119 6.5v11A2.5 2.5 0 0116.5 20h-9A2.5 2.5 0 015 17.5v-11z" stroke="#22c55e" stroke-width="1.8"/></svg>`,
+      audio: `<svg viewBox="0 0 24 24" fill="none"><path d="M12 4v16M8 8v8M16 8v8M4 10v4M20 10v4" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+      video: `<svg viewBox="0 0 24 24" fill="none"><path d="M4.8 6.5A2.5 2.5 0 017.3 4h7.4A2.5 2.5 0 0117.2 6.5v11a2.5 2.5 0 01-2.5 2.5H7.3a2.5 2.5 0 01-2.5-2.5v-11z" stroke="#ec4899" stroke-width="1.8"/><path d="M10 9l4 3-4 3V9z" fill="#ec4899"/></svg>`
+    };
+
+    modeCards.forEach(card => {
+      card.addEventListener("click", () => setMode(card.dataset.mode));
+    });
+
+    function setMode(mode) {
+      currentMode = mode;
+      modeCards.forEach(card => card.classList.toggle("active", card.dataset.mode === mode));
+      fileInput.accept = ACCEPT[mode];
+      $("drop-hint").textContent = HINT[mode];
+      dropTitle.textContent = TITLE[mode];
+      dropIcon.innerHTML = ICONS[mode];
+      videoOpts.classList.toggle("show", mode === "video");
+      clearFile();
+      hideResult();
+      hideError();
+    }
+
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) onFile(fileInput.files[0]);
+    });
+
+    dropZone.addEventListener("dragover", event => {
+      event.preventDefault();
+      dropZone.classList.add("over");
+    });
+
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("over"));
+
+    dropZone.addEventListener("drop", event => {
+      event.preventDefault();
+      dropZone.classList.remove("over");
+      if (event.dataTransfer.files[0]) onFile(event.dataTransfer.files[0]);
+    });
+
+    function onFile(file) {
+      selectedFile = file;
+      analyzeBtn.disabled = false;
+      hideResult();
+      hideError();
+
+      const url = URL.createObjectURL(file);
+      imgPreview.style.display = "none";
+      vidPreview.style.display = "none";
+      audPreview.style.display = "none";
+
+      if (currentMode === "image") {
+        imgPreview.src = url;
+        imgPreview.style.display = "block";
+        currentImagePath = url;
+      } else if (currentMode === "video") {
+        vidPreview.src = url;
+        vidPreview.style.display = "block";
+        currentImagePath = null;
+      } else {
+        audPreview.src = url;
+        audPreview.style.display = "block";
+        currentImagePath = null;
+      }
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      fileInput.value = "";
+      analyzeBtn.disabled = true;
+      currentImagePath = null;
+      imgPreview.style.display = "none";
+      vidPreview.style.display = "none";
+      audPreview.style.display = "none";
+      imgPreview.src = "";
+      vidPreview.src = "";
+      audPreview.src = "";
+    }
+
+    const STEPS = ["step-upload", "step-extract", "step-infer", "step-done"];
+
+    function setStep(index) {
+      STEPS.forEach((id, i) => {
+        const el = $(id);
+        el.classList.remove("active", "done");
+        if (i < index) el.classList.add("done");
+        else if (i === index) el.classList.add("active");
+      });
+    }
+
+    function showProgress() {
+      progressEl.classList.add("show");
+    }
+
+    function hideProgress() {
+      progressEl.classList.remove("show");
+      STEPS.forEach(id => $(id).classList.remove("active", "done"));
+    }
+
+    analyzeBtn.addEventListener("click", analyze);
+
+    async function analyze() {
+      if (!selectedFile) return;
+
+      hideResult();
+      hideError();
+      showProgress();
+      analyzeBtn.disabled = true;
+
+      const form = new FormData();
+      form.append("file", selectedFile);
+
+      setStep(0);
+      await delay(260);
+      setStep(1);
+
+      let url = `${API}/predict/${currentMode}`;
+      if (currentMode === "video") {
+        url += `?sample_frames=${$("sample-frames").value}&fusion_mode=${$("fusion-mode").value}`;
+      }
+
+      setStep(2);
+
+      let data;
+      try {
+        const res = await fetch(url, { method: "POST", body: form });
+        if (!res.ok) {
+          let detail = res.statusText;
+          try {
+            const e = await res.json();
+            detail = e.detail || detail;
+          } catch (_) {}
+          throw new Error(detail);
+        }
+        data = await res.json();
+      } catch (e) {
+        hideProgress();
+        showError(e.message || "Request failed");
+        analyzeBtn.disabled = false;
+        return;
+      }
+
+      setStep(3);
+      await delay(360);
+      hideProgress();
+      showResult(data);
+      analyzeBtn.disabled = false;
+      pushHistory(data);
+    }
+
+    function showResult(data) {
+      const label = data.label || (data.confidence >= 0.5 ? "FAKE" : "REAL");
+      const isFake = ["FAKE", "SPOOF"].includes(String(label).toUpperCase());
+      const confValue = Number(data.confidence ?? data.ensemble_prob ?? data.spoof_prob ?? 0);
+      const safeConf = Math.max(0, Math.min(1, confValue));
+      const conf = (safeConf * 100).toFixed(1);
+      const color = isFake ? "var(--fake)" : "var(--real)";
+
+      verdictEl.textContent = label;
+      verdictEl.className = "verdict " + (isFake ? "fake" : "real");
+      confFill.style.width = conf + "%";
+      confFill.style.background = color;
+      confPct.textContent = conf + "%";
+      fusionBadge.textContent = data.fusion_mode || data.modality || currentMode.toUpperCase();
+
+      probBreak.innerHTML = "";
+      const rows = buildRows(data);
+      rows.forEach(row => {
+        const div = document.createElement("div");
+        div.className = "prob-row";
+
+        if (row.prob == null) {
+          div.innerHTML = `<span class="prob-name">${row.label}</span><span style="color:var(--muted);font-size:.84rem;">${row.note || "Not available"}</span><span></span>`;
+        } else {
+          const pct = (Math.max(0, Math.min(1, Number(row.prob))) * 100).toFixed(1);
+          const fill = row.prob >= 0.5 ? "var(--fake)" : "var(--real)";
+          div.innerHTML = `
+            <span class="prob-name ${row.bold ? "bold" : ""}">${row.label}</span>
+            <div class="mini-track"><div class="mini-fill" style="width:${pct}%;background:${fill};"></div></div>
+            <span class="prob-pct ${row.bold ? "bold" : ""}">${pct}%</span>`;
+        }
+
+        probBreak.appendChild(div);
+      });
+
+      heatmapSec.style.display = currentMode === "image" ? "block" : "none";
+      heatmapImg.classList.remove("show");
+      heatmapImg.src = "";
+
+      resultCard.classList.add("show");
+      resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function buildRows(data) {
+      if (currentMode === "image") {
+        const rows = [];
+        if (data.per_model) {
+          Object.entries(data.per_model).forEach(([key, value]) => {
+            rows.push({ label: formatModelName(key), prob: value });
+          });
+        }
+        if (data.ensemble_prob != null) {
+          rows.push({ label: "Visual ensemble", prob: data.ensemble_prob, bold: true });
+        }
+        return rows.length ? rows : [{ label: "Prediction score", prob: data.confidence, bold: true }];
+      }
+
+      if (currentMode === "audio") {
+        return [
+          { label: "LCNN spoof probability", prob: data.spoof_prob ?? data.ensemble_prob ?? data.confidence, bold: true }
+        ];
+      }
+
+      const rows = [];
+      if (data.visual_prob != null) rows.push({ label: "Visual ensemble", prob: data.visual_prob });
+      if (data.audio_prob != null) rows.push({ label: "Audio LCNN", prob: data.audio_prob });
+      else rows.push({ label: "Audio LCNN", prob: null, note: "No audio track" });
+      if (data.ensemble_prob != null) rows.push({ label: "Fused score", prob: data.ensemble_prob, bold: true });
+      if (!rows.length) rows.push({ label: "Prediction score", prob: data.confidence, bold: true });
+      return rows;
+    }
+
+    function formatModelName(name) {
+      return String(name)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, char => char.toUpperCase())
+        .replace("Vit", "ViT")
+        .replace("B0", "B0");
+    }
+
+    function hideResult() {
+      resultCard.classList.remove("show");
+    }
+
+    btnHeatmap.addEventListener("click", generateHeatmap);
+
+    async function generateHeatmap() {
+      if (!selectedFile || currentMode !== "image") return;
+
+      const modelName = $("heatmap-model").value;
+      heatmapSpin.classList.add("show");
+      heatmapImg.classList.remove("show");
+      btnHeatmap.disabled = true;
+
+      try {
+        const form = new FormData();
+        form.append("file", selectedFile);
+
+        const res = await fetch(`${API}/predict/gradcam?model_name=${modelName}`, {
+          method: "POST",
+          body: form
+        });
+
+        if (!res.ok) {
+          let detail = res.statusText;
+          try {
+            const e = await res.json();
+            detail = e.detail || detail;
+          } catch (_) {}
+          throw new Error(detail);
+        }
+
+        const data = await res.json();
+        heatmapImg.src = "data:image/png;base64," + data.heatmap_b64;
+        heatmapImg.classList.add("show");
+      } catch (e) {
+        showError("Grad CAM: " + (e.message || "Request failed"));
+      } finally {
+        heatmapSpin.classList.remove("show");
+        btnHeatmap.disabled = false;
+      }
+    }
+
+    function pushHistory(data) {
+      const entry = {
+        id: Date.now(),
+        mode: currentMode,
+        filename: selectedFile?.name || "unknown",
+        label: data.label || "RESULT",
+        conf: Number(data.confidence ?? data.ensemble_prob ?? data.spoof_prob ?? 0),
+        thumbUrl: currentMode === "image" ? currentImagePath : null,
+        ts: new Date().toLocaleTimeString()
+      };
+
+      history.unshift(entry);
+      if (history.length > 12) history.pop();
+
+      localStorage.setItem("dd_history", JSON.stringify(history.map(item => ({ ...item, thumbUrl: null }))));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      if (!history.length) {
+        histSection.style.display = "none";
+        return;
+      }
+
+      histSection.style.display = "block";
+      histList.innerHTML = "";
+
+      history.forEach(item => {
+        const isFake = ["FAKE", "SPOOF"].includes(String(item.label).toUpperCase());
+        const div = document.createElement("div");
+        div.className = "hist-item";
+        div.innerHTML = `
+          <div class="hist-thumb">${item.thumbUrl ? `<img src="${item.thumbUrl}" alt="">` : HISTORY_ICON[item.mode]}</div>
+          <div class="hist-info">
+            <div class="hist-name">${escapeHtml(item.filename)}</div>
+            <div class="hist-meta">${item.mode} | ${item.ts}</div>
+          </div>
+          <div class="hist-verdict ${isFake ? "fake" : "real"}">${escapeHtml(item.label)} ${(Number(item.conf) * 100).toFixed(0)}%</div>
+        `;
+        histList.appendChild(div);
+      });
+    }
+
+    $("btn-clear-hist").addEventListener("click", () => {
+      history = [];
+      localStorage.removeItem("dd_history");
+      histSection.style.display = "none";
+    });
+
+    function showError(message) {
+      errorBox.textContent = "Alert: " + message;
+      errorBox.classList.add("show");
+    }
+
+    function hideError() {
+      errorBox.classList.remove("show");
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    setMode("image");
+    renderHistory();
+  </script>
+</body>
+</html>
