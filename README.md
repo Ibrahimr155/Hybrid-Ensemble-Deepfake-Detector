@@ -142,11 +142,11 @@ Swagger docs: `http://localhost:8000/docs`
 
 | Name | Role |
 |------|------|
-| Muavia Shakeel | Model development, backend, UI |
-| [Team Member 2] | [Role] |
-| [Team Member 3] | [Role] |
+| Ibrahim Rabbani | Model development, backend, UI |
+| Taha SOhail | |Frontend development (HTML, CSS, Flask templates), UI/UX design, web integration|
+| Eisha Tur Raziya |  |Dataset collection, model testing, documentation|
 
-**Supervisor:** [Supervisor Name]  
+**Supervisor:** Dr Zulfiqar Ahmed 
 **Institution:** Department of Computer Science, Hazara University Mansehra  
 **Degree:** BS Computer Science — Final Year Project 2026
 
