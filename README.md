@@ -140,11 +140,13 @@ Swagger docs: `http://localhost:8000/docs`
 
 ## Team
 
-| Name | Role |
-|------|------|
+## 👥 Team Members & Responsibilities
+
+| Name | Responsibilities |
+|------|------------------|
 | Ibrahim Rabbani | Model development, backend, UI |
-| Taha Sohail | |Frontend development (HTML, CSS, Flask templates), UI/UX design, web integration|
-| Eisha Tur Raziya | |Dataset collection, model testing, documentation|
+| Taha Sohail | Frontend development (HTML, CSS, Flask templates), UI/UX design, web integration |
+| Eisha Tur Raziya | Dataset collection, model testing, documentation |
 
 **Supervisor:** Dr Zulfiqar Ahmed 
 **Institution:** Department of Computer Science, Hazara University Mansehra  
