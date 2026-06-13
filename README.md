@@ -148,7 +148,7 @@ Swagger docs: `http://localhost:8000/docs`
 | Taha Sohail | Frontend development (HTML, CSS, Flask templates), UI/UX design, web integration |
 | Eisha Tur Raziya | Dataset collection, model testing, documentation |
 
-**Supervisor:** Dr Zulfiqar Ahmed 
+**Supervisor:** Dr. Zulfiqar Ahmed  
 **Institution:** Department of Computer Science, Hazara University Mansehra  
 **Degree:** BS Computer Science — Final Year Project 2026
 
